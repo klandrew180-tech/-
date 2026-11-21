@@ -13,14 +13,17 @@ export default async function handler(req) {
   url.protocol = 'https:';
   url.port = '';
 
-  const headers = new Headers(req.headers);
-  headers.set('Host', url.hostname);
-  headers.delete('x-forwarded-for');
-  headers.delete('x-real-ip');
+  const cleanHeaders = new Headers();
+  const allowed = ['content-type', 'authorization', 'x-goog-api-key', 'x-goog-api-client', 'accept'];
+  for (const [k, v] of req.headers.entries()) {
+    if (allowed.includes(k.toLowerCase())) {
+      cleanHeaders.set(k, v);
+    }
+  }
 
   return fetch(url.toString(), {
     method: req.method,
-    headers,
-    body: req.body,
+    headers: cleanHeaders,
+    body: req.method === 'GET' || req.method === 'HEAD' ? null : req.body,
   });
 }

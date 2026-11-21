@@ -1,12 +1,14 @@
 export default async function handler(req, res) {
-  const url = new URL(req.url, 'https://googleapis.com');
+  const incomingUrl = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
+  let targetHost = '://googleapis.com';
+  let targetPath = incomingUrl.pathname;
 
-  if (url.pathname.startsWith('/openai')) {
-    url.hostname = '://openai.com';
-    url.pathname = url.pathname.replace(/^\/openai/, '');
-  } else {
-    url.hostname = '://googleapis.com';
+  if (targetPath.startsWith('/openai')) {
+    targetHost = '://openai.com';
+    targetPath = targetPath.replace(/^\/openai/, '') || '/';
   }
+
+  const targetUrl = `https://${targetHost}${targetPath}${incomingUrl.search}`;
 
   const headers = {};
   const allowed = ['content-type', 'authorization', 'x-goog-api-key', 'x-goog-api-client', 'accept'];
@@ -25,7 +27,7 @@ export default async function handler(req, res) {
     fetchOptions.body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
   }
 
-  const response = await fetch(url.toString(), fetchOptions);
+  const response = await fetch(targetUrl, fetchOptions);
   res.status(response.status);
   response.headers.forEach((value, key) => {
     if (!['content-encoding', 'transfer-encoding', 'connection'].includes(key.toLowerCase())) {
